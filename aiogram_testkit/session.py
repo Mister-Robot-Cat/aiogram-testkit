@@ -1,0 +1,91 @@
+from typing import Any, AsyncGenerator, Dict, List, Optional, Type, TypeVar
+
+from aiogram.client.bot import Bot
+from aiogram.client.session.base import BaseSession
+from aiogram.methods import TelegramMethod
+from aiogram.methods.base import TelegramType
+
+T = TypeVar("T", bound=TelegramMethod[Any])
+
+
+class MockedSession(BaseSession):
+    """
+    A mocked session for testing aiogram bots without making real network requests.
+    Records all outgoing requests and allows mocking responses.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.requests: List[TelegramMethod[Any]] = []
+        self.responses: Dict[str, Any] = {}
+
+    def add_result(self, method_name: str, result: Any) -> None:
+        """
+        Mock the result for a specific API method (e.g. 'SendMessage').
+        """
+        self.responses[method_name] = result
+
+    def get_request(self, method_type: Type[T]) -> Optional[T]:
+        """
+        Returns the first recorded request matching the specified TelegramMethod type.
+        """
+        for req in self.requests:
+            if isinstance(req, method_type):
+                return req
+        return None
+
+    def find_requests(self, method_type: Type[T]) -> List[T]:
+        """
+        Returns all recorded requests matching the specified TelegramMethod type.
+        """
+        return [req for req in self.requests if isinstance(req, method_type)]
+
+    def has_request(self, method_type: Type[TelegramMethod[Any]]) -> bool:
+        """
+        Checks whether any request of the specified TelegramMethod type was made.
+        """
+        return any(isinstance(req, method_type) for req in self.requests)
+
+    @property
+    def last_request(self) -> Optional[TelegramMethod[Any]]:
+        """
+        Returns the last recorded request or None if no requests have been made.
+        """
+        return self.requests[-1] if self.requests else None
+
+    def reset(self) -> None:
+        """
+        Resets recorded requests and mocked responses.
+        """
+        self.requests.clear()
+        self.responses.clear()
+
+    async def close(self) -> None:
+        pass
+
+    async def make_request(
+        self,
+        bot: Bot,
+        method: TelegramMethod[TelegramType],
+        timeout: Optional[int] = None,
+    ) -> TelegramType:
+        """
+        Intercepts the request, records it, and returns the mocked response if available.
+        """
+        self.requests.append(method)
+        method_name = type(method).__name__
+
+        if method_name in self.responses:
+            return self.responses[method_name]
+
+        return None
+
+    async def stream_content(
+        self,
+        url: str,
+        headers: Optional[Dict[str, Any]] = None,
+        timeout: int = 30,
+        chunk_size: int = 65536,
+        raise_for_status: bool = True,
+    ) -> AsyncGenerator[bytes, None]:
+        yield b""
