@@ -5,7 +5,8 @@ A lightweight toolkit for testing [aiogram](https://github.com/aiogram/aiogram) 
 ## Features
 
 - **MockedSession**: In-memory `BaseSession` implementation that records all outgoing bot requests and returns predefined responses.
-- **Request Inspection**: Query recorded requests with helpers like `get_request`, `find_requests`, `has_request`, and `last_request`.
+- **Request Inspection**: Query recorded requests with helpers like `get_request`, `find_requests`, `has_request`, `count_requests`, and `last_request`.
+- **Event Factories**: Helpers (`create_message`, `create_user`, `create_chat`, `create_callback_query`, `create_update`) with sensible defaults for quick testing.
 - **Zero External Mocks**: Clean, type-safe API that does not require monkeypatching `aiohttp`.
 
 ## Installation
@@ -20,23 +21,17 @@ pip install aiogram-testkit
 import pytest
 from aiogram import Bot
 from aiogram.methods import SendMessage
-from aiogram.types import Message, Chat
-from aiogram_testkit import MockedSession
+from aiogram_testkit import MockedSession, create_message
 
 @pytest.mark.asyncio
 async def test_bot_send_message():
     session = MockedSession()
     bot = Bot(token="1234:TEST", session=session)
 
-    # Mock response
+    # Mock response with factory helper
     session.add_result(
         "SendMessage",
-        Message(
-            message_id=1,
-            date=1700000000,
-            chat=Chat(id=42, type="private"),
-            text="pong",
-        ),
+        create_message(text="pong", chat_id=42),
     )
 
     # Trigger bot logic

@@ -46,6 +46,14 @@ class MockedSession(BaseSession):
         """
         return any(isinstance(req, method_type) for req in self.requests)
 
+    def count_requests(self, method_type: Optional[Type[TelegramMethod[Any]]] = None) -> int:
+        """
+        Returns the number of recorded requests, optionally filtered by method type.
+        """
+        if method_type is None:
+            return len(self.requests)
+        return sum(1 for req in self.requests if isinstance(req, method_type))
+
     @property
     def last_request(self) -> Optional[TelegramMethod[Any]]:
         """
